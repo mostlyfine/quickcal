@@ -1,0 +1,120 @@
+{
+  "extName": {
+    "message": "QuickCal"
+  },
+  "extDescription": {
+    "message": "ツールバーから1日表示カレンダーを開くChrome拡張です。"
+  },
+  "actionOpenCalendar": {
+    "message": "カレンダーを開く"
+  },
+  "popupTitle": {
+    "message": "カレンダー"
+  },
+  "popupSettingsTitle": {
+    "message": "設定"
+  },
+  "popupCloseTitle": {
+    "message": "閉じる"
+  },
+  "popupTodayButton": {
+    "message": "今日"
+  },
+  "popupUnselected": {
+    "message": "未選択"
+  },
+  "popupAllDay": {
+    "message": "終日"
+  },
+  "popupUntitled": {
+    "message": "(無題)"
+  },
+  "popupNoCalendarSelected": {
+    "message": "表示対象カレンダーが未設定です。設定から選択してください。"
+  },
+  "popupEventLoadFailed": {
+    "message": "イベント取得に失敗しました: $ERROR$ 設定画面でGoogle接続を再実行してください。",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupInitFailed": {
+    "message": "初期化に失敗しました: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "カレンダー設定"
+  },
+  "optionsHeading": {
+    "message": "表示カレンダー設定"
+  },
+  "optionsDescription": {
+    "message": "ツールバーのカレンダー表示とバッジの対象になるカレンダーを選択します。"
+  },
+  "optionsConnect": {
+    "message": "Googleに接続"
+  },
+  "optionsReload": {
+    "message": "一覧を再取得"
+  },
+  "optionsSave": {
+    "message": "保存"
+  },
+  "optionsCalendarListEmpty": {
+    "message": "カレンダー一覧が空です。"
+  },
+  "optionsCalendarFetchFailed": {
+    "message": "カレンダー取得に失敗しました: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsSelectCalendarPrompt": {
+    "message": "カレンダーを選択してください。"
+  },
+  "optionsSelectedCalendarNotFound": {
+    "message": "選択カレンダーが見つかりません。"
+  },
+  "optionsSaved": {
+    "message": "保存しました。"
+  },
+  "optionsConnectFailed": {
+    "message": "接続に失敗しました: $ERROR$\\nGoogle Cloud ConsoleでChrome拡張用OAuthクライアントを作成し、manifest.jsonのoauth2.client_idを設定してください。",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "minutesUnit": {
+    "message": "分"
+  },
+  "oauthClientIdNotConfigured": {
+    "message": "OAuthクライアントIDが未設定です。manifest.json の oauth2.client_id をGoogle Cloudで発行したChrome拡張用クライアントIDに置き換えてください。"
+  },
+  "googleAuthIncomplete": {
+    "message": "Google認証が未完了です。設定画面で「Googleに接続」を押して認証してください。"
+  },
+  "googleAuthFailed": {
+    "message": "Google認証に失敗しました: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "googleTokenMissing": {
+    "message": "トークンが取得できませんでした。"
+  },
+  "googleTokenFetchFailed": {
+    "message": "Google認証トークンを取得できませんでした。"
+  }
+}

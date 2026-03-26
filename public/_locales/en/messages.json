@@ -1,0 +1,120 @@
+{
+  "extName": {
+    "message": "QuickCal"
+  },
+  "extDescription": {
+    "message": "Chrome extension that opens a daily calendar from the toolbar."
+  },
+  "actionOpenCalendar": {
+    "message": "Open calendar"
+  },
+  "popupTitle": {
+    "message": "Calendar"
+  },
+  "popupSettingsTitle": {
+    "message": "Settings"
+  },
+  "popupCloseTitle": {
+    "message": "Close"
+  },
+  "popupTodayButton": {
+    "message": "Today"
+  },
+  "popupUnselected": {
+    "message": "Not selected"
+  },
+  "popupAllDay": {
+    "message": "All day"
+  },
+  "popupUntitled": {
+    "message": "(Untitled)"
+  },
+  "popupNoCalendarSelected": {
+    "message": "No calendar selected. Please choose one in settings."
+  },
+  "popupEventLoadFailed": {
+    "message": "Failed to load events: $ERROR$. Reconnect Google account in settings.",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupInitFailed": {
+    "message": "Initialization failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Calendar Settings"
+  },
+  "optionsHeading": {
+    "message": "Display Calendar"
+  },
+  "optionsDescription": {
+    "message": "Choose the calendar used for popup display and toolbar badge."
+  },
+  "optionsConnect": {
+    "message": "Connect to Google"
+  },
+  "optionsReload": {
+    "message": "Reload list"
+  },
+  "optionsSave": {
+    "message": "Save"
+  },
+  "optionsCalendarListEmpty": {
+    "message": "Calendar list is empty."
+  },
+  "optionsCalendarFetchFailed": {
+    "message": "Failed to fetch calendars: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsSelectCalendarPrompt": {
+    "message": "Please select a calendar."
+  },
+  "optionsSelectedCalendarNotFound": {
+    "message": "Selected calendar was not found."
+  },
+  "optionsSaved": {
+    "message": "Saved."
+  },
+  "optionsConnectFailed": {
+    "message": "Connection failed: $ERROR$. Create a Chrome extension OAuth client in Google Cloud Console and set oauth2.client_id in manifest.json.",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "minutesUnit": {
+    "message": "min"
+  },
+  "oauthClientIdNotConfigured": {
+    "message": "OAuth client ID is not configured. Replace oauth2.client_id in manifest.json with a Chrome extension client ID issued in Google Cloud."
+  },
+  "googleAuthIncomplete": {
+    "message": "Google authentication is incomplete. Click \"Connect to Google\" in settings and authorize."
+  },
+  "googleAuthFailed": {
+    "message": "Google authentication failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "googleTokenMissing": {
+    "message": "Failed to obtain auth token."
+  },
+  "googleTokenFetchFailed": {
+    "message": "Failed to obtain Google auth token."
+  }
+}

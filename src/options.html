@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title id="options-title"></title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1 id="options-heading"></h1>
+      <p id="options-description" class="description"></p>
+      <div class="actions">
+        <button id="connect" class="primary"></button>
+        <button id="reload"></button>
+      </div>
+      <p id="message" class="message hidden"></p>
+      <form id="calendar-form" class="calendar-form"></form>
+      <div class="footer">
+        <button id="save" class="primary" disabled></button>
+      </div>
+    </main>
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>

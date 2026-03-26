@@ -1,0 +1,20 @@
+{
+  "name": "QuickCal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "build": "npm run clean && vite build"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.307",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.21",
+    "vite-plugin-web-extension": "^4.5.0",
+    "vitest": "^2.1.3"
+  }
+}
