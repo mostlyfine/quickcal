@@ -37,6 +37,12 @@ body {
   justify-content: space-between;
 }
 
+.title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
 .title {
   font-size: 16px;
 }
@@ -96,18 +102,8 @@ body {
 }
 
 .all-day {
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  align-items: start;
-  padding: 8px 0;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--line);
-}
-
-.all-day-label {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: right;
-  padding-right: 8px;
 }
 
 .all-day-events {
@@ -122,6 +118,7 @@ body {
   padding: 4px 8px;
   border-radius: 8px;
   color: #202124;
+  cursor: pointer;
 }
 
 .timeline-wrap {
@@ -131,16 +128,15 @@ body {
 }
 
 .tz-label {
-  position: absolute;
-  top: 6px;
-  left: 10px;
-  font-weight: 600;
-  font-size: 18px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 6px;
 }
+
 
 .timeline {
   position: absolute;
-  inset: 32px 0 0 0;
+  inset: 0;
   overflow-y: auto;
   display: grid;
   grid-template-columns: 56px 1fr;
@@ -194,6 +190,7 @@ body {
   padding: 6px 8px;
   overflow: hidden;
   min-height: 20px;
+  cursor: pointer;
 }
 
 .event-title {
@@ -206,4 +203,84 @@ body {
   margin: 2px 0 0;
   font-size: 12px;
   color: #5f6368;
+}
+
+.event-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-popup-overlay.hidden {
+  display: none;
+}
+
+.event-popup {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  width: 295px;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+.event-popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.event-popup-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+  word-break: break-word;
+}
+
+.event-popup-close {
+  flex-shrink: 0;
+}
+
+.event-popup-time {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.event-popup-location {
+  display: block;
+  margin: 8px 0 0;
+  font-size: 13px;
+  word-break: break-word;
+  color: #1a73e8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.event-popup-location::before {
+  content: "\1F4CD ";
+}
+
+.event-popup-description {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.event-popup-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: #1a73e8;
+  text-decoration: underline;
+  font-size: 13px;
+  cursor: pointer;
 }

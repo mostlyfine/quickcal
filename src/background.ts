@@ -1,6 +1,6 @@
-import { BADGE } from "./lib/config.js";
+import { BADGE, DEFAULT_COLOR, MESSAGE_TYPES } from "./lib/config.js";
 import { eventStartDate, minutesDiff } from "./lib/date.js";
-import { loadSelectedCalendar, loadUpcomingEvents } from "./lib/google-calendar.js";
+import { loadSelectedCalendars, loadUpcomingEventsForCalendars } from "./lib/google-calendar.js";
 import { badgeTextForRemaining } from "./lib/badge.js";
 
 function clearBadge(): void {
@@ -8,20 +8,20 @@ function clearBadge(): void {
 }
 
 function colorToBadge(color: string): string {
-  if (!color || !color.startsWith("#")) return "#1a73e8";
+  if (!color || !color.startsWith("#")) return DEFAULT_COLOR;
   return color;
 }
 
 async function updateBadge(): Promise<void> {
   try {
-    const calendar = await loadSelectedCalendar();
-    if (!calendar.id) {
+    const calendarList = await loadSelectedCalendars();
+    if (!calendarList.length) {
       clearBadge();
       return;
     }
 
     const now = new Date();
-    const events = await loadUpcomingEvents(calendar.id, now, false);
+    const events = await loadUpcomingEventsForCalendars(calendarList, now);
     const next = events.find((event) => {
       if (!event.start?.dateTime) return false;
       const start = eventStartDate(event);
@@ -35,22 +35,20 @@ async function updateBadge(): Promise<void> {
     }
 
     const remaining = minutesDiff(now, eventStartDate(next));
-    chrome.action.setBadgeBackgroundColor({ color: colorToBadge(calendar.color) });
+    chrome.action.setBadgeBackgroundColor({ color: colorToBadge(next.calendarColor || calendarList[0].color) });
     chrome.action.setBadgeText({ text: badgeTextForRemaining(remaining) });
   } catch {
     clearBadge();
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+function initBadge(): void {
   chrome.alarms.create(BADGE.alarmName, { periodInMinutes: BADGE.refreshIntervalMinutes });
   void updateBadge();
-});
+}
 
-chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create(BADGE.alarmName, { periodInMinutes: BADGE.refreshIntervalMinutes });
-  void updateBadge();
-});
+chrome.runtime.onInstalled.addListener(initBadge);
+chrome.runtime.onStartup.addListener(initBadge);
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === BADGE.alarmName) {
@@ -59,7 +57,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "refresh-badge") {
+  if (message?.type === MESSAGE_TYPES.refreshBadge) {
     updateBadge().then(() => sendResponse({ ok: true }));
     return true;
   }

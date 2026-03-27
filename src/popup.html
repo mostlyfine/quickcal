@@ -9,8 +9,12 @@
   <body>
     <header class="top-header">
       <div class="title-row">
-        <span id="popup-heading" class="title"></span>
+        <div class="title-group">
+          <span id="popup-heading" class="title"></span>
+          <span id="tz-label" class="tz-label"></span>
+        </div>
         <div class="header-actions">
+          <button id="add-event" class="icon-btn" title="">＋</button>
           <button id="open-options" class="icon-btn" title="">⚙</button>
           <button id="close-popup" class="icon-btn" title="">✕</button>
         </div>
@@ -29,12 +33,10 @@
     <div id="message" class="message hidden"></div>
 
     <section id="all-day-section" class="all-day hidden">
-      <div id="all-day-label" class="all-day-label"></div>
       <div id="all-day-events" class="all-day-events"></div>
     </section>
 
     <section class="timeline-wrap">
-      <div id="tz-label" class="tz-label"></div>
       <div class="timeline">
         <div id="time-labels" class="time-labels"></div>
         <div id="grid" class="grid"></div>
@@ -47,6 +49,19 @@
         <p class="event-time"></p>
       </article>
     </template>
+
+    <div id="event-popup-overlay" class="event-popup-overlay hidden">
+      <div class="event-popup">
+        <div class="event-popup-header">
+          <h3 class="event-popup-title"></h3>
+          <button class="event-popup-close icon-btn">✕</button>
+        </div>
+        <p class="event-popup-time"></p>
+        <a class="event-popup-location"></a>
+        <p class="event-popup-description"></p>
+        <a class="event-popup-link"></a>
+      </div>
+    </div>
 
     <script type="module" src="./popup.ts"></script>
   </body>

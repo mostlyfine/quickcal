@@ -1,16 +1,19 @@
 import {
   authorize,
   loadCalendarList,
-  loadSelectedCalendar,
-  saveSelectedCalendar,
+  loadSelectedCalendars,
+  saveSelectedCalendars,
   type GoogleCalendar
 } from "./lib/google-calendar.js";
 import { applyDocumentLanguage, t } from "./lib/i18n.js";
+import { toErrorMessage } from "./lib/date.js";
+import { DEFAULT_COLOR, MESSAGE_TYPES } from "./lib/config.js";
 
 interface OptionsUI {
   connect: HTMLButtonElement;
   reload: HTMLButtonElement;
   save: HTMLButtonElement;
+  closeOptions: HTMLButtonElement;
   form: HTMLFormElement;
   message: HTMLParagraphElement;
 }
@@ -19,6 +22,7 @@ const ui: OptionsUI = {
   connect: document.getElementById("connect") as HTMLButtonElement,
   reload: document.getElementById("reload") as HTMLButtonElement,
   save: document.getElementById("save") as HTMLButtonElement,
+  closeOptions: document.getElementById("close-options") as HTMLButtonElement,
   form: document.getElementById("calendar-form") as HTMLFormElement,
   message: document.getElementById("message") as HTMLParagraphElement
 };
@@ -32,6 +36,7 @@ function applyStaticTexts(): void {
   ui.connect.textContent = t("optionsConnect");
   ui.reload.textContent = t("optionsReload");
   ui.save.textContent = t("optionsSave");
+  ui.closeOptions.textContent = t("optionsClose");
 }
 
 function setMessage(text = "", ok = false): void {
@@ -46,7 +51,7 @@ function setMessage(text = "", ok = false): void {
   ui.message.textContent = text;
 }
 
-function renderCalendarList(selectedId = ""): void {
+function renderCalendarList(selectedIds: string[] = []): void {
   ui.form.innerHTML = "";
   if (!calendars.length) {
     setMessage(t("optionsCalendarListEmpty"));
@@ -58,20 +63,20 @@ function renderCalendarList(selectedId = ""): void {
     const label = document.createElement("label");
     label.className = "calendar-option";
 
-    const radio = document.createElement("input");
-    radio.type = "radio";
-    radio.name = "calendarId";
-    radio.value = cal.id;
-    radio.checked = cal.id === selectedId;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.name = "calendarId";
+    checkbox.value = cal.id;
+    checkbox.checked = selectedIds.includes(cal.id);
 
     const dot = document.createElement("span");
     dot.className = "dot";
-    dot.style.background = cal.backgroundColor || "#1a73e8";
+    dot.style.background = cal.backgroundColor || DEFAULT_COLOR;
 
     const text = document.createElement("span");
     text.textContent = cal.summary || t("popupUntitled");
 
-    label.append(radio, dot, text);
+    label.append(checkbox, dot, text);
     ui.form.appendChild(label);
   });
 
@@ -81,32 +86,32 @@ function renderCalendarList(selectedId = ""): void {
 async function reloadCalendars(interactive = false): Promise<void> {
   setMessage();
   try {
-    calendars = await loadCalendarList(interactive);
-    const selected = await loadSelectedCalendar();
-    renderCalendarList(selected.id);
+    const [list, selected] = await Promise.all([loadCalendarList(interactive), loadSelectedCalendars()]);
+    calendars = list;
+    renderCalendarList(selected.map((c) => c.id));
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     setMessage(t("optionsCalendarFetchFailed", message));
   }
 }
 
 async function onSave(): Promise<void> {
   const fd = new FormData(ui.form);
-  const selectedId = fd.get("calendarId");
-  if (!selectedId || typeof selectedId !== "string") {
+  const selectedIds = fd.getAll("calendarId").filter((v): v is string => typeof v === "string");
+  if (!selectedIds.length) {
     setMessage(t("optionsSelectCalendarPrompt"));
     return;
   }
 
-  const calendar = calendars.find((c) => c.id === selectedId);
-  if (!calendar) {
+  const selected = calendars.filter((c) => selectedIds.includes(c.id));
+  if (!selected.length) {
     setMessage(t("optionsSelectedCalendarNotFound"));
     return;
   }
 
-  await saveSelectedCalendar(calendar);
-  setMessage(t("optionsSaved"), true);
-  await chrome.runtime.sendMessage({ type: "refresh-badge" });
+  await saveSelectedCalendars(selected);
+  await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.refreshBadge });
+  window.close();
 }
 
 ui.connect.addEventListener("click", async () => {
@@ -114,7 +119,7 @@ ui.connect.addEventListener("click", async () => {
     await authorize(true);
     await reloadCalendars(false);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     setMessage(t("optionsConnectFailed", message));
   }
 });
@@ -124,6 +129,9 @@ ui.reload.addEventListener("click", () => {
 });
 ui.save.addEventListener("click", () => {
   void onSave();
+});
+ui.closeOptions.addEventListener("click", () => {
+  window.close();
 });
 
 applyDocumentLanguage();

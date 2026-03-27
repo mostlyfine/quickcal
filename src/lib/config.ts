@@ -1,7 +1,14 @@
+export const DEFAULT_COLOR = "#1a73e8";
+
 export const STORAGE_KEYS = {
   selectedCalendarId: "selectedCalendarId",
   selectedCalendarColor: "selectedCalendarColor",
-  selectedCalendarSummary: "selectedCalendarSummary"
+  selectedCalendarSummary: "selectedCalendarSummary",
+  selectedCalendars: "selectedCalendars"
+} as const;
+
+export const MESSAGE_TYPES = {
+  refreshBadge: "refresh-badge"
 } as const;
 
 export const API = {

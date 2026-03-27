@@ -11,6 +11,10 @@ export interface CalendarEvent {
   summary?: string;
   backgroundColor?: string;
   colorId?: string;
+  calendarColor?: string;
+  location?: string;
+  description?: string;
+  htmlLink?: string;
   start: CalendarEventTime;
   end: CalendarEventTime;
 }
@@ -60,4 +64,8 @@ export function minutesDiff(from: Date, to: Date): number {
 
 export function clamp(num: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, num));
+}
+
+export function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

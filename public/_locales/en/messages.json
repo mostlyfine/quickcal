@@ -9,7 +9,7 @@
     "message": "Open calendar"
   },
   "popupTitle": {
-    "message": "Calendar"
+    "message": "QuickCal"
   },
   "popupSettingsTitle": {
     "message": "Settings"
@@ -66,6 +66,9 @@
   "optionsSave": {
     "message": "Save"
   },
+  "optionsClose": {
+    "message": "Close"
+  },
   "optionsCalendarListEmpty": {
     "message": "Calendar list is empty."
   },
@@ -116,5 +119,14 @@
   },
   "googleTokenFetchFailed": {
     "message": "Failed to obtain Google auth token."
+  },
+  "popupAddEventTitle": {
+    "message": "Add event"
+  },
+  "popupLocation": {
+    "message": "Location"
+  },
+  "popupOpenInGoogleCalendar": {
+    "message": "Open in Google Calendar"
   }
 }

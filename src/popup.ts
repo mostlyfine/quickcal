@@ -1,26 +1,29 @@
 import {
   formatDate,
   hourLabels,
+  dayRange,
   eventStartDate,
   eventEndDate,
   isAllDayEvent,
   clamp,
+  toErrorMessage,
   type CalendarEvent
 } from "./lib/date.js";
 import { applyDocumentLanguage, getSupportedLocale, t } from "./lib/i18n.js";
-import { loadSelectedCalendar, loadDayEvents, type StoredCalendar } from "./lib/google-calendar.js";
+import { loadSelectedCalendars, loadDayEventsForCalendars, type StoredCalendar } from "./lib/google-calendar.js";
 
 const MINUTES_PER_DAY = 24 * 60;
 const ROW_HEIGHT = 52;
 
 let currentDate = new Date();
-let calendar: StoredCalendar | null = null;
+let calendars: StoredCalendar[] = [];
 
 interface PopupUI {
   todayDate: HTMLButtonElement;
   goToday: HTMLButtonElement;
   prevDay: HTMLButtonElement;
   nextDay: HTMLButtonElement;
+  addEvent: HTMLButtonElement;
   openOptions: HTMLButtonElement;
   closePopup: HTMLButtonElement;
   message: HTMLDivElement;
@@ -33,7 +36,7 @@ interface PopupUI {
   template: HTMLTemplateElement;
   popupTitle: HTMLTitleElement;
   popupHeading: HTMLSpanElement;
-  allDayLabel: HTMLDivElement;
+  eventPopupOverlay: HTMLDivElement;
 }
 
 const ui: PopupUI = {
@@ -41,6 +44,7 @@ const ui: PopupUI = {
   goToday: document.getElementById("go-today") as HTMLButtonElement,
   prevDay: document.getElementById("prev-day") as HTMLButtonElement,
   nextDay: document.getElementById("next-day") as HTMLButtonElement,
+  addEvent: document.getElementById("add-event") as HTMLButtonElement,
   openOptions: document.getElementById("open-options") as HTMLButtonElement,
   closePopup: document.getElementById("close-popup") as HTMLButtonElement,
   message: document.getElementById("message") as HTMLDivElement,
@@ -53,16 +57,16 @@ const ui: PopupUI = {
   template: document.getElementById("event-template") as HTMLTemplateElement,
   popupTitle: document.getElementById("popup-title") as HTMLTitleElement,
   popupHeading: document.getElementById("popup-heading") as HTMLSpanElement,
-  allDayLabel: document.getElementById("all-day-label") as HTMLDivElement
+  eventPopupOverlay: document.getElementById("event-popup-overlay") as HTMLDivElement
 };
 
 function applyStaticTexts(): void {
   ui.popupTitle.textContent = t("popupTitle");
   ui.popupHeading.textContent = t("popupTitle");
+  ui.addEvent.title = t("popupAddEventTitle");
   ui.openOptions.title = t("popupSettingsTitle");
   ui.closePopup.title = t("popupCloseTitle");
   ui.goToday.textContent = t("popupTodayButton");
-  ui.allDayLabel.textContent = t("popupAllDay");
 }
 
 function setMessage(text = "", isError = true): void {
@@ -102,17 +106,56 @@ function renderTimeAxis(): void {
   ui.grid.appendChild(layer);
 }
 
-function eventStyle(event: CalendarEvent, index: number, columns: number): Partial<CSSStyleDeclaration> {
-  const start = eventStartDate(event);
-  const end = eventEndDate(event);
-  const dayStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 0, 0, 0, 0);
+interface LayoutInfo {
+  column: number;
+  totalColumns: number;
+  from: number;
+  to: number;
+}
 
-  const from = clamp((start.getTime() - dayStart.getTime()) / 60000, 0, MINUTES_PER_DAY);
-  const to = clamp((end.getTime() - dayStart.getTime()) / 60000, 0, MINUTES_PER_DAY);
-  const top = (from / 60) * ROW_HEIGHT;
-  const height = Math.max(((to - from) / 60) * ROW_HEIGHT, 20);
-  const widthPct = 100 / columns;
-  const leftPct = widthPct * index;
+function computeLayout(events: CalendarEvent[]): LayoutInfo[] {
+  const dayStart = dayRange(currentDate).start;
+
+  const ranges = events.map((e) => {
+    const from = clamp((eventStartDate(e).getTime() - dayStart.getTime()) / 60000, 0, MINUTES_PER_DAY);
+    const to = clamp((eventEndDate(e).getTime() - dayStart.getTime()) / 60000, 0, MINUTES_PER_DAY);
+    return { from, to: Math.max(to, from + 1) };
+  });
+
+  // Assign columns greedily: for each event, find the first column not occupied by an overlapping event
+  const columns: number[] = new Array(events.length).fill(0);
+  for (let i = 0; i < events.length; i++) {
+    const used = new Set<number>();
+    for (let j = 0; j < i; j++) {
+      if (ranges[j].from < ranges[i].to && ranges[i].from < ranges[j].to) {
+        used.add(columns[j]);
+      }
+    }
+    let col = 0;
+    while (used.has(col) && col < 2) col++;
+    columns[i] = Math.min(col, 2);
+  }
+
+  // For each event, determine totalColumns by checking all overlapping events' max column
+  const result: LayoutInfo[] = [];
+  for (let i = 0; i < events.length; i++) {
+    let maxCol = columns[i];
+    for (let j = 0; j < events.length; j++) {
+      if (i !== j && ranges[j].from < ranges[i].to && ranges[i].from < ranges[j].to) {
+        maxCol = Math.max(maxCol, columns[j]);
+      }
+    }
+    result.push({ column: columns[i], totalColumns: maxCol + 1, from: ranges[i].from, to: ranges[i].to });
+  }
+
+  return result;
+}
+
+function eventStyle(layout: LayoutInfo): Partial<CSSStyleDeclaration> {
+  const top = (layout.from / 60) * ROW_HEIGHT;
+  const height = Math.max(((layout.to - layout.from) / 60) * ROW_HEIGHT, 20);
+  const widthPct = 100 / layout.totalColumns;
+  const leftPct = widthPct * layout.column;
 
   return {
     top: `${top}px`,
@@ -122,16 +165,15 @@ function eventStyle(event: CalendarEvent, index: number, columns: number): Parti
   };
 }
 
+const timeFmt = new Intl.DateTimeFormat(getSupportedLocale(), {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false
+});
+
 function formatTimeRange(event: CalendarEvent): string {
   if (isAllDayEvent(event)) return t("popupAllDay");
-  const start = eventStartDate(event);
-  const end = eventEndDate(event);
-  const fmt = new Intl.DateTimeFormat(getSupportedLocale(), {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  });
-  return `${fmt.format(start)} - ${fmt.format(end)}`;
+  return `${timeFmt.format(eventStartDate(event))} - ${timeFmt.format(eventEndDate(event))}`;
 }
 
 function colorWithAlpha(hex?: string, alpha = "55"): string {
@@ -151,8 +193,9 @@ function renderAllDay(events: CalendarEvent[]): void {
   events.forEach((event) => {
     const pill = document.createElement("div");
     pill.className = "all-day-pill";
-    pill.style.background = colorWithAlpha(event.colorId ? "#fbbc04" : event.backgroundColor || calendar?.color);
+    pill.style.background = colorWithAlpha(event.colorId ? "#fbbc04" : event.backgroundColor || event.calendarColor);
     pill.textContent = event.summary || t("popupUntitled");
+    pill.addEventListener("click", () => showEventPopup(event));
     ui.allDayEvents.appendChild(pill);
   });
 }
@@ -170,18 +213,71 @@ function renderNowLine(isToday: boolean): void {
   layer.appendChild(line);
 }
 
+function showEventPopup(event: CalendarEvent): void {
+  const overlay = ui.eventPopupOverlay;
+  const popup = overlay.querySelector(".event-popup") as HTMLElement;
+
+  (popup.querySelector(".event-popup-title") as HTMLElement).textContent =
+    event.summary || t("popupUntitled");
+  (popup.querySelector(".event-popup-time") as HTMLElement).textContent =
+    formatTimeRange(event);
+
+  const locationEl = popup.querySelector(".event-popup-location") as HTMLAnchorElement;
+  if (event.location) {
+    locationEl.textContent = event.location;
+    locationEl.href = `https://www.google.com/maps/search/${encodeURIComponent(event.location)}`;
+    locationEl.classList.remove("hidden");
+    locationEl.onclick = (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: locationEl.href });
+    };
+  } else {
+    locationEl.classList.add("hidden");
+  }
+
+  const descEl = popup.querySelector(".event-popup-description") as HTMLElement;
+  if (event.description) {
+    descEl.textContent = event.description;
+    descEl.classList.remove("hidden");
+  } else {
+    descEl.classList.add("hidden");
+  }
+
+  const linkEl = popup.querySelector(".event-popup-link") as HTMLAnchorElement;
+  if (event.htmlLink) {
+    linkEl.href = event.htmlLink;
+    linkEl.textContent = t("popupOpenInGoogleCalendar");
+    linkEl.classList.remove("hidden");
+    linkEl.onclick = (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: event.htmlLink! });
+    };
+  } else {
+    linkEl.classList.add("hidden");
+  }
+
+  overlay.classList.remove("hidden");
+}
+
+function hideEventPopup(): void {
+  ui.eventPopupOverlay.classList.add("hidden");
+}
+
 function renderTimed(events: CalendarEvent[]): void {
   const layer = ui.grid.querySelector(".event-layer") as HTMLElement;
   layer.innerHTML = "";
   if (!events.length) return;
 
-  const columns = Math.min(3, Math.max(1, events.length > 4 ? 3 : 2));
+  const layouts = computeLayout(events);
   events.forEach((event, i) => {
     const node = ui.template.content.firstElementChild!.cloneNode(true) as HTMLElement;
     (node.querySelector(".event-title") as HTMLElement).textContent = event.summary || t("popupUntitled");
     (node.querySelector(".event-time") as HTMLElement).textContent = formatTimeRange(event);
-    node.style.background = colorWithAlpha(event.backgroundColor || calendar?.color);
-    Object.assign(node.style, eventStyle(event, i % columns, columns));
+    node.style.background = colorWithAlpha(event.backgroundColor || event.calendarColor);
+    Object.assign(node.style, eventStyle(layouts[i]));
+
+    node.addEventListener("click", () => showEventPopup(event));
+
     layer.appendChild(node);
   });
 }
@@ -220,7 +316,7 @@ async function renderEvents(): Promise<void> {
 
   const isToday = isSameDay(currentDate, new Date());
 
-  if (!calendar?.id) {
+  if (!calendars.length) {
     setMessage(t("popupNoCalendarSelected"));
     renderAllDay([]);
     renderTimed([]);
@@ -229,27 +325,30 @@ async function renderEvents(): Promise<void> {
   }
 
   try {
-    const events = await loadDayEvents(calendar.id, currentDate, false);
-    renderAllDay(events.filter(isAllDayEvent));
-    renderTimed(events.filter((e) => !isAllDayEvent(e)));
+    const events = await loadDayEventsForCalendars(calendars, currentDate);
+    const allDay: CalendarEvent[] = [];
+    const timed: CalendarEvent[] = [];
+    for (const e of events) {
+      (isAllDayEvent(e) ? allDay : timed).push(e);
+    }
+    renderAllDay(allDay);
+    renderTimed(timed);
     renderNowLine(isToday);
     scheduleInitialTimelineScroll();
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = toErrorMessage(error);
     setMessage(t("popupEventLoadFailed", message));
     renderNowLine(isToday);
   }
 }
 
 function bindActions(): void {
-  ui.goToday.addEventListener("click", () => {
+  const goToday = () => {
     currentDate = new Date();
     void renderEvents();
-  });
-  ui.todayDate.addEventListener("click", () => {
-    currentDate = new Date();
-    void renderEvents();
-  });
+  };
+  ui.goToday.addEventListener("click", goToday);
+  ui.todayDate.addEventListener("click", goToday);
   ui.prevDay.addEventListener("click", () => {
     currentDate = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000);
     void renderEvents();
@@ -258,8 +357,21 @@ function bindActions(): void {
     currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
     void renderEvents();
   });
+  ui.addEvent.addEventListener("click", () => {
+    const d = currentDate;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dateStr = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}/${dateStr}`;
+    chrome.tabs.create({ url });
+  });
   ui.openOptions.addEventListener("click", () => chrome.runtime.openOptionsPage());
   ui.closePopup.addEventListener("click", () => window.close());
+
+  ui.eventPopupOverlay.addEventListener("click", (e) => {
+    if (e.target === ui.eventPopupOverlay) hideEventPopup();
+  });
+  (ui.eventPopupOverlay.querySelector(".event-popup-close") as HTMLElement)
+    .addEventListener("click", () => hideEventPopup());
 }
 
 async function init(): Promise<void> {
@@ -273,7 +385,7 @@ async function init(): Promise<void> {
   const gmtOffset = timeZoneLabel.match(/GMT(?:[+-]\d{1,2}(?::\d{2})?)?$/)?.[0];
   ui.tzLabel.textContent = gmtOffset ?? timeZoneLabel;
 
-  calendar = await loadSelectedCalendar();
+  calendars = await loadSelectedCalendars();
   await renderEvents();
 }
 
