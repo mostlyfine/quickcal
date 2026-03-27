@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "description": "__MSG_extDescription__",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "default_locale": "en",
   "action": {
     "default_title": "__MSG_actionOpenCalendar__",
@@ -34,7 +34,7 @@
     "https://www.googleapis.com/*"
   ],
   "oauth2": {
-    "client_id": "209003939569-q9hk0okvn67c8mfv6qjtl9kjao7gspli.apps.googleusercontent.com",
+    "client_id": "",
     "scopes": [
       "https://www.googleapis.com/auth/calendar.readonly"
     ]

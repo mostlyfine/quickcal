@@ -1,4 +1,5 @@
 export const DEFAULT_COLOR = "#1a73e8";
+export const CALENDAR_EVENT_COLOR = "#fbbc04";
 
 export const STORAGE_KEYS = {
   selectedCalendarId: "selectedCalendarId",

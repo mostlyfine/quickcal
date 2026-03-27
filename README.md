@@ -25,14 +25,27 @@ A Chrome extension that shows your Google Calendar schedule in a daily timeline 
 1. Go to [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials)
 2. Create an OAuth 2.0 Client ID with application type **Chrome extension**
 3. Set the extension ID (you can find it on `chrome://extensions` after loading the unpacked extension once)
-4. Copy the client ID and replace `oauth2.client_id` in `public/manifest.json`
 
 ### Install and build
 
 ```sh
 npm install
+cp .env.example .env
+```
+
+Edit `.env` and set your OAuth client ID:
+
+```
+GOOGLE_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+```
+
+Then build:
+
+```sh
 npm run build
 ```
+
+The client ID is injected into `dist/manifest.json` at build time. The source `public/manifest.json` never contains credentials.
 
 The built extension is output to `dist/`.
 

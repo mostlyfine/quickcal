@@ -11,9 +11,14 @@ import {
 } from "./lib/date.js";
 import { applyDocumentLanguage, getSupportedLocale, t } from "./lib/i18n.js";
 import { loadSelectedCalendars, loadDayEventsForCalendars, type StoredCalendar } from "./lib/google-calendar.js";
+import { CALENDAR_EVENT_COLOR } from "./lib/config.js";
 
 const MINUTES_PER_DAY = 24 * 60;
-const ROW_HEIGHT = 52;
+let ROW_HEIGHT = 48;
+const START_HOUR = 8;
+const END_HOUR = 20;
+const START_MINUTE = START_HOUR * 60;
+const DISPLAY_ROWS = END_HOUR - START_HOUR + 1; // 8〜20の13行
 
 let currentDate = new Date();
 let calendars: StoredCalendar[] = [];
@@ -85,11 +90,16 @@ function updateDateLabel(): void {
   ui.todayDate.textContent = formatDate(currentDate);
 }
 
+function computeRowHeight(): void {
+  ROW_HEIGHT = ui.timeline.clientHeight / DISPLAY_ROWS;
+  document.documentElement.style.setProperty("--row-height", `${ROW_HEIGHT}px`);
+}
+
 function renderTimeAxis(): void {
   ui.timeLabels.innerHTML = "";
   ui.grid.innerHTML = "";
 
-  const labels = hourLabels();
+  const labels = hourLabels().slice(START_HOUR, END_HOUR + 1);
   for (const label of labels) {
     const el = document.createElement("div");
     el.className = "time-label";
@@ -152,7 +162,7 @@ function computeLayout(events: CalendarEvent[]): LayoutInfo[] {
 }
 
 function eventStyle(layout: LayoutInfo): Partial<CSSStyleDeclaration> {
-  const top = (layout.from / 60) * ROW_HEIGHT;
+  const top = ((layout.from - START_MINUTE) / 60) * ROW_HEIGHT;
   const height = Math.max(((layout.to - layout.from) / 60) * ROW_HEIGHT, 20);
   const widthPct = 100 / layout.totalColumns;
   const leftPct = widthPct * layout.column;
@@ -177,7 +187,7 @@ function formatTimeRange(event: CalendarEvent): string {
 }
 
 function colorWithAlpha(hex?: string, alpha = "55"): string {
-  if (!hex || !hex.startsWith("#")) return "#fbbc0455";
+  if (!hex || !hex.startsWith("#")) return `${CALENDAR_EVENT_COLOR}55`;
   if (hex.length === 7) return `${hex}${alpha}`;
   return hex;
 }
@@ -193,7 +203,7 @@ function renderAllDay(events: CalendarEvent[]): void {
   events.forEach((event) => {
     const pill = document.createElement("div");
     pill.className = "all-day-pill";
-    pill.style.background = colorWithAlpha(event.colorId ? "#fbbc04" : event.backgroundColor || event.calendarColor);
+    pill.style.background = colorWithAlpha(event.colorId ? CALENDAR_EVENT_COLOR : event.backgroundColor || event.calendarColor);
     pill.textContent = event.summary || t("popupUntitled");
     pill.addEventListener("click", () => showEventPopup(event));
     ui.allDayEvents.appendChild(pill);
@@ -206,7 +216,9 @@ function renderNowLine(isToday: boolean): void {
   if (!isToday) return;
 
   const now = new Date();
-  const top = ((now.getHours() * 60 + now.getMinutes()) / 60) * ROW_HEIGHT;
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  if (currentMinutes < START_MINUTE || currentMinutes >= END_HOUR * 60) return;
+  const top = ((currentMinutes - START_MINUTE) / 60) * ROW_HEIGHT;
   const line = document.createElement("div");
   line.className = "now-line";
   line.style.top = `${top}px`;
@@ -273,7 +285,9 @@ function renderTimed(events: CalendarEvent[]): void {
     const node = ui.template.content.firstElementChild!.cloneNode(true) as HTMLElement;
     (node.querySelector(".event-title") as HTMLElement).textContent = event.summary || t("popupUntitled");
     (node.querySelector(".event-time") as HTMLElement).textContent = formatTimeRange(event);
-    node.style.background = colorWithAlpha(event.backgroundColor || event.calendarColor);
+    const color = event.backgroundColor || event.calendarColor;
+    node.style.background = colorWithAlpha(color);
+    node.style.border = `1.5px solid ${color || CALENDAR_EVENT_COLOR}`;
     Object.assign(node.style, eventStyle(layouts[i]));
 
     node.addEventListener("click", () => showEventPopup(event));
@@ -290,25 +304,6 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
-function scrollTimelineToInitialPosition(): void {
-  const now = new Date();
-  if (!isSameDay(currentDate, now)) {
-    ui.timeline.scrollTop = 0;
-    return;
-  }
-
-  const minutesFromTop = Math.max(0, now.getHours() * 60 + now.getMinutes() - 60);
-  const desiredTop = (minutesFromTop / 60) * ROW_HEIGHT;
-  ui.timeline.scrollTop = Math.max(0, desiredTop);
-}
-
-function scheduleInitialTimelineScroll(): void {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      scrollTimelineToInitialPosition();
-    });
-  });
-}
 
 async function renderEvents(): Promise<void> {
   setMessage();
@@ -319,6 +314,7 @@ async function renderEvents(): Promise<void> {
   if (!calendars.length) {
     setMessage(t("popupNoCalendarSelected"));
     renderAllDay([]);
+    computeRowHeight();
     renderTimed([]);
     renderNowLine(isToday);
     return;
@@ -332,12 +328,13 @@ async function renderEvents(): Promise<void> {
       (isAllDayEvent(e) ? allDay : timed).push(e);
     }
     renderAllDay(allDay);
+    computeRowHeight();
     renderTimed(timed);
     renderNowLine(isToday);
-    scheduleInitialTimelineScroll();
   } catch (error) {
     const message = toErrorMessage(error);
     setMessage(t("popupEventLoadFailed", message));
+    computeRowHeight();
     renderNowLine(isToday);
   }
 }
@@ -366,6 +363,7 @@ function bindActions(): void {
   });
   ui.openOptions.addEventListener("click", () => chrome.runtime.openOptionsPage());
   ui.closePopup.addEventListener("click", () => window.close());
+  ui.popupHeading.addEventListener("click", () => chrome.tabs.create({ url: "https://calendar.google.com/calendar/r" }));
 
   ui.eventPopupOverlay.addEventListener("click", (e) => {
     if (e.target === ui.eventPopupOverlay) hideEventPopup();
@@ -378,6 +376,7 @@ async function init(): Promise<void> {
   applyDocumentLanguage();
   applyStaticTexts();
   bindActions();
+  computeRowHeight();
   renderTimeAxis();
   const timeZoneLabel = new Intl.DateTimeFormat(getSupportedLocale(), {
     timeZoneName: "shortOffset"
