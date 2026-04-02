@@ -288,7 +288,14 @@ function renderTimed(events: CalendarEvent[]): void {
     const color = event.backgroundColor || event.calendarColor;
     node.style.background = colorWithAlpha(color);
     node.style.border = `1.5px solid ${color || CALENDAR_EVENT_COLOR}`;
-    Object.assign(node.style, eventStyle(layouts[i]));
+    const style = eventStyle(layouts[i]);
+    Object.assign(node.style, style);
+    const h = parseFloat(style.height!);
+    if (h < 32) {
+      node.classList.add("event-card--mini");
+    } else if (h < 49) {
+      node.classList.add("event-card--compact");
+    }
 
     node.addEventListener("click", () => showEventPopup(event));
 
